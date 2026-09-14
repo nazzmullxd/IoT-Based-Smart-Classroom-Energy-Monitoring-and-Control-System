@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "author": "Smart Classroom Prototype",
+  "editor": "wokwi",
+  "parts": [
+    {"type":"wokwi-text","id":"title","top":-288,"left":150,"attrs":{"text":"SMART CLASSROOM ENERGY CONTROL"}},
+    {"type":"wokwi-text","id":"sensorLabel","top":-240,"left":-260,"attrs":{"text":"SENSORS & INPUT"}},
+    {"type":"wokwi-text","id":"controllerLabel","top":-240,"left":55,"attrs":{"text":"EDGE CONTROLLER"}},
+    {"type":"wokwi-text","id":"relayLabel","top":-240,"left":470,"attrs":{"text":"RELAY CONTROL"}},
+    {"type":"wokwi-text","id":"loadLabel","top":-240,"left":780,"attrs":{"text":"APPLIANCE STATUS"}},
+
+    {"type":"wokwi-dht22","id":"dht","top":-190,"left":-235,"attrs":{"temperature":"29","humidity":"60"}},
+    {"type":"wokwi-pir-motion-sensor","id":"pir","top":-15,"left":-270,"attrs":{"delayTime":"2"}},
+    {"type":"wokwi-photoresistor-sensor","id":"ldr","top":175,"left":-265,"attrs":{"lux":"100"}},
+    {"type":"wokwi-pushbutton","id":"projectorButton","top":390,"left":-220,"attrs":{"color":"blue","label":"PROJECTOR","key":"P"}},
+
+    {"type":"board-esp32-devkit-c-v4","id":"esp32","top":-145,"left":55,"attrs":{}},
+
+    {"type":"wokwi-relay-module","id":"relayAc","top":-195,"left":485,"attrs":{"transistor":"pnp"}},
+    {"type":"wokwi-relay-module","id":"relayFan","top":-45,"left":485,"attrs":{"transistor":"pnp"}},
+    {"type":"wokwi-relay-module","id":"relayLight","top":105,"left":485,"attrs":{"transistor":"pnp"}},
+    {"type":"wokwi-relay-module","id":"relayProjector","top":255,"left":485,"attrs":{"transistor":"pnp"}},
+
+    {"type":"wokwi-text","id":"acText","top":-188,"left":610,"attrs":{"text":"AC"}},
+    {"type":"wokwi-text","id":"fanText","top":-38,"left":610,"attrs":{"text":"FAN"}},
+    {"type":"wokwi-text","id":"lightText","top":112,"left":610,"attrs":{"text":"LIGHT"}},
+    {"type":"wokwi-text","id":"projectorText","top":262,"left":610,"attrs":{"text":"PROJECTOR"}},
+
+    {"type":"wokwi-led","id":"ledAc","top":-180,"left":810,"attrs":{"color":"blue","label":"AC"}},
+    {"type":"wokwi-resistor","id":"rAc","top":-105,"left":800,"rotate":90,"attrs":{"value":"220"}},
+    {"type":"wokwi-led","id":"ledFan","top":-30,"left":810,"attrs":{"color":"green","label":"FAN"}},
+    {"type":"wokwi-resistor","id":"rFan","top":45,"left":800,"rotate":90,"attrs":{"value":"220"}},
+    {"type":"wokwi-led","id":"ledLight","top":120,"left":810,"attrs":{"color":"yellow","label":"LIGHT"}},
+    {"type":"wokwi-resistor","id":"rLight","top":195,"left":800,"rotate":90,"attrs":{"value":"220"}},
+    {"type":"wokwi-led","id":"ledProjector","top":270,"left":810,"attrs":{"color":"red","label":"PROJECTOR"}},
+    {"type":"wokwi-resistor","id":"rProjector","top":345,"left":800,"rotate":90,"attrs":{"value":"220"}}
+  ],
+  "connections": [
+    ["dht:SDA","esp32:15","limegreen",["v115","h235","*"]],
+    ["pir:OUT","esp32:13","limegreen",["v0","h155","*"]],
+    ["ldr:AO","esp32:34","cyan",["h170","v-185","*"]],
+    ["projectorButton:1.l","esp32:27","blue",["h85","v-155","*"]],
+
+    ["esp32:3V3","dht:VCC","red",["h-55","v-100","h-170","*"]],
+    ["dht:VCC","ldr:VCC","red",["h-32","v365","*"]],
+    ["esp32:5V.1","pir:VCC","red",["h-40","v-300","h-190","*"]],
+    ["esp32:GND.1","dht:GND","black",["h-35","v-120","h-195","*"]],
+    ["dht:GND","ldr:GND","black",["h-18","v365","*"]],
+    ["ldr:GND","pir:GND","black",["h-18","v-190","*"]],
+    ["projectorButton:2.l","esp32:GND.2","black",["v35","h320","*"]],
+
+    ["esp32:23","relayAc:IN","blue",["h75","v-22","h160","*"]],
+    ["esp32:22","relayFan:IN","limegreen",["h95","v105","h140","*"]],
+    ["esp32:21","relayLight:IN","orange",["h115","v235","h120","*"]],
+    ["esp32:19","relayProjector:IN","magenta",["h135","v345","h100","*"]],
+
+    ["esp32:5V.1","relayAc:VCC","red",["h20","v-245","h280","*"]],
+    ["relayAc:VCC","relayFan:VCC","red",["h-18","v150","*"]],
+    ["relayFan:VCC","relayLight:VCC","red",["h-18","v150","*"]],
+    ["relayLight:VCC","relayProjector:VCC","red",["h-18","v150","*"]],
+    ["esp32:GND.2","relayAc:GND","black",["h35","v-360","h265","*"]],
+    ["relayAc:GND","relayFan:GND","black",["h-32","v150","*"]],
+    ["relayFan:GND","relayLight:GND","black",["h-32","v150","*"]],
+    ["relayLight:GND","relayProjector:GND","black",["h-32","v150","*"]],
+
+    ["esp32:3V3","relayAc:COM","red",["v-85","h465","*"]],
+    ["relayAc:COM","relayFan:COM","red",["h22","v150","*"]],
+    ["relayFan:COM","relayLight:COM","red",["h22","v150","*"]],
+    ["relayLight:COM","relayProjector:COM","red",["h22","v150","*"]],
+
+    ["relayAc:NO","ledAc:A","blue",["h125","v12","*"]],
+    ["ledAc:C","rAc:1","blue",["v20","*"]],
+    ["relayFan:NO","ledFan:A","limegreen",["h125","v12","*"]],
+    ["ledFan:C","rFan:1","limegreen",["v20","*"]],
+    ["relayLight:NO","ledLight:A","orange",["h125","v12","*"]],
+    ["ledLight:C","rLight:1","orange",["v20","*"]],
+    ["relayProjector:NO","ledProjector:A","magenta",["h125","v12","*"]],
+    ["ledProjector:C","rProjector:1","magenta",["v20","*"]],
+
+    ["rAc:2","rFan:2","black",["h35","v150","*"]],
+    ["rFan:2","rLight:2","black",["h35","v150","*"]],
+    ["rLight:2","rProjector:2","black",["h35","v150","*"]],
+    ["rProjector:2","relayProjector:GND","black",["v35","h-230","*"]]
+  ],
+  "serialMonitor": {"display":"auto","newline":"lf"},
+  "dependencies": {}
+}

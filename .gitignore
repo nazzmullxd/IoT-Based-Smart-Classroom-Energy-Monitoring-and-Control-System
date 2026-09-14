@@ -1,0 +1,13 @@
+.env
+.venv/
+.pytest_cache/
+.pio/
+**/.pio/
+**/__pycache__/
+*.py[cod]
+*.db
+*.db-shm
+*.db-wal
+.wokwi-token
+coverage/
+htmlcov/
