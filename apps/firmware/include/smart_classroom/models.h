@@ -1,36 +1,30 @@
 #pragma once
+
 #include <Arduino.h>
 
-enum class DeviceId : uint8_t { AC, FAN, LIGHT, PROJECTOR };
-enum class OverrideMode : uint8_t { AUTO, FORCE_ON, FORCE_OFF };
-enum class OperatingMode : uint8_t { AUTO, CONVENTIONAL };
-enum class DeviceState : uint8_t { OFF, ON, COOLING_DOWN };
+enum class DeviceId : uint8_t { LIGHT = 0, FAN = 1, COOLING = 2, COUNT = 3 };
+enum class OperatingMode : uint8_t { SMART, CONVENTIONAL, MANUAL };
+enum class DeviceState : uint8_t { OFF, ON };
 
 struct SensorReading {
   unsigned long uptimeMs = 0;
   float temperatureC = NAN;
   float humidityPct = NAN;
-  float illuminanceLux = 0;
+  float illuminanceLux = 0.0f;
   int ldrRaw = 0;
   bool occupied = false;
   bool pirRaw = false;
-  bool dark = false;
-  bool dhtError = true;
-  bool ldrError = false;
+  bool sensorError = true;
 };
 
 struct DeviceRecord {
   DeviceState state = DeviceState::OFF;
-  OverrideMode overrideMode = OverrideMode::AUTO;
   unsigned long onSinceMs = 0;
   uint64_t accumulatedMs = 0;
-  uint32_t transitions = 0;
-  unsigned long pendingOffSinceMs = 0;
-  bool pendingOff = false;
+  uint32_t switchingEvents = 0;
   const char *reason = "BOOT";
 };
 
+const char *deviceName(DeviceId value);
 const char *stateName(DeviceState value);
-const char *overrideName(OverrideMode value);
 const char *modeName(OperatingMode value);
-

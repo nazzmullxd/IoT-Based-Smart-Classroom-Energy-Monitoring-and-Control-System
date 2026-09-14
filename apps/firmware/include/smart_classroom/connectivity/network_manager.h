@@ -3,7 +3,7 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 
-typedef void (*CommandHandler)(const char *payload);
+typedef void (*CommandHandler)(const char *topic, const char *payload);
 
 class NetworkManager {
  public:

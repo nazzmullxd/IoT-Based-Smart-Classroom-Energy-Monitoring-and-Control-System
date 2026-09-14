@@ -17,9 +17,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest==8.3.4"]
+research = ["matplotlib>=3.9,<4", "numpy>=2,<3", "pandas>=2.2,<3"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = [".", "src", "../.."]
 testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]

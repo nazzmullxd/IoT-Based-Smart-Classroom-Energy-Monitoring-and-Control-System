@@ -1,1 +1,0 @@
-"""Database and messaging adapters."""

@@ -10,7 +10,7 @@ bool OccupancyManager::update(bool motion, unsigned long now) {
   } else if (
       occupied_ &&
       everDetected_ &&
-      (unsigned long)(now - lastMotionMs_) >= Config::OCCUPANCY_HOLD_MS) {
+      (unsigned long)(now - lastMotionMs_) >= Config::OCCUPANCY_TIMEOUT_MS) {
     occupied_ = false;
   }
   return occupied_;

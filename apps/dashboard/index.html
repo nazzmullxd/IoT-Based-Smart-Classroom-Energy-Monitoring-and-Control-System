@@ -3,79 +3,89 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Smart Classroom</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <title>Smart Classroom Energy Management</title>
+    <link rel="stylesheet" href="/static/style.css">
   </head>
   <body>
-    <header class="page-header">
+    <header class="site-header">
       <div>
-        <p class="eyebrow">CLASSROOM-01 · LIVE CONTROL</p>
-        <h1>Smart Classroom</h1>
+        <p class="eyebrow">Undergraduate thesis research prototype</p>
+        <h1>Smart Classroom Energy Management</h1>
+        <p>Occupancy, thermal, and illumination-aware local control</p>
       </div>
-      <div id="connection" class="pill offline">Waiting for telemetry</div>
+      <div class="connection" aria-live="polite">
+        <span id="dataStatus" class="badge neutral">Waiting for telemetry</span>
+        <span id="mqttStatus" class="badge neutral">MQTT unknown</span>
+      </div>
     </header>
 
     <main>
-      <section class="environment" aria-label="Current environment">
-        <div class="metric">
-          <span>Temperature</span>
-          <strong id="temperature">—</strong>
-          <small>°C</small>
+      <section aria-labelledby="environmentTitle">
+        <div class="section-title">
+          <h2 id="environmentTitle">Classroom Environment</h2>
+          <span id="lastUpdated">No observations received</span>
         </div>
-        <div class="metric">
-          <span>Humidity</span>
-          <strong id="humidity">—</strong>
-          <small>% RH</small>
-        </div>
-        <div class="metric">
-          <span>Ambient light</span>
-          <strong id="lux">—</strong>
-          <small>lux (estimated)</small>
-        </div>
-        <div class="metric">
-          <span>Occupancy</span>
-          <strong id="occupancy">—</strong>
-          <small id="sensorStatus">Sensors</small>
+        <div class="metrics three-columns">
+          <article class="card metric"><span>Occupancy</span><strong id="occupancy">—</strong><small>PIR with configurable hold</small></article>
+          <article class="card metric"><span>Temperature</span><strong id="temperature">—</strong><small>DHT22 reading</small></article>
+          <article class="card metric"><span>Ambient illumination</span><strong id="lux">—</strong><small>LDR-estimated lux</small></article>
         </div>
       </section>
 
-      <section class="toolbar" aria-label="System controls">
+      <section aria-labelledby="applianceTitle">
+        <h2 id="applianceTitle">Appliance Status</h2>
+        <div class="metrics three-columns">
+          <article class="card device"><span>Lighting</span><strong id="lightState" class="device-state">OFF</strong><small id="lightRuntime">Runtime 0 min</small></article>
+          <article class="card device"><span>Fan</span><strong id="fanState" class="device-state">OFF</strong><small id="fanRuntime">Runtime 0 min</small></article>
+          <article class="card device"><span>Cooling</span><strong id="coolingState" class="device-state">OFF</strong><small id="coolingRuntime">Runtime 0 min</small></article>
+        </div>
+      </section>
+
+      <section class="card control-panel" aria-labelledby="modeTitle">
         <div>
-          <span>Experiment mode</span>
-          <button type="button" data-mode="AUTO">AUTO</button>
+          <h2 id="modeTitle">Operating Mode</h2>
+          <p>SMART runs the proposed controller. CONVENTIONAL is the scheduled-operation baseline. MANUAL enables direct device testing.</p>
+        </div>
+        <div id="modeControls" class="button-group" aria-label="Operating mode">
+          <button type="button" data-mode="SMART">SMART</button>
           <button type="button" data-mode="CONVENTIONAL">CONVENTIONAL</button>
+          <button type="button" data-mode="MANUAL">MANUAL</button>
         </div>
-        <button type="button" id="reset">Reset statistics</button>
+        <div id="manualControls" class="manual-controls" aria-label="Manual appliance controls">
+          <label>Light <button type="button" data-device="light" data-state="true">ON</button><button type="button" data-device="light" data-state="false">OFF</button></label>
+          <label>Fan <button type="button" data-device="fan" data-state="true">ON</button><button type="button" data-device="fan" data-state="false">OFF</button></label>
+          <label>Cooling <button type="button" data-device="cooling" data-state="true">ON</button><button type="button" data-device="cooling" data-state="false">OFF</button></label>
+        </div>
+        <p id="commandMessage" class="message" aria-live="polite"></p>
       </section>
 
-      <h2>Equipment</h2>
-      <section id="devices" class="devices" aria-live="polite"></section>
-
-      <h2>Estimated energy</h2>
-      <section class="energy">
-        <div><span>Automated</span><strong id="autoEnergy">0 Wh</strong></div>
-        <div><span>Conventional</span><strong id="baseEnergy">0 Wh</strong></div>
-        <div><span>Saved</span><strong id="savedEnergy">0 Wh</strong></div>
-        <div class="accent"><span>Saving ratio</span><strong id="ratio">0%</strong></div>
+      <section aria-labelledby="energyTitle">
+        <div class="section-title">
+          <div><h2 id="energyTitle">Energy Evaluation</h2><p class="disclaimer">Estimated from nominal device power × runtime. Not direct mains-energy measurement.</p></div>
+        </div>
+        <div class="metrics three-columns">
+          <article class="card metric"><span>Smart energy</span><strong id="smartEnergy">0.00 Wh</strong><small>Accumulated SMART observations</small></article>
+          <article class="card metric"><span>Conventional energy</span><strong id="conventionalEnergy">0.00 Wh</strong><small>Accumulated baseline observations</small></article>
+          <article class="card metric"><span>Estimated saving</span><strong id="saving">0.0%</strong><small id="savingWh">0.00 Wh difference</small></article>
+        </div>
+        <article class="card chart-panel">
+          <h3>SMART vs CONVENTIONAL</h3>
+          <canvas id="energyChart" width="1000" height="300" aria-label="Estimated energy comparison chart"></canvas>
+        </article>
       </section>
 
-      <section class="grid">
-        <div class="panel">
-          <h2>Environment history</h2>
-          <canvas id="chart" width="800" height="260"></canvas>
-          <div class="legend">
-            <i class="temp"></i>Temperature
-            <i class="light"></i>Light
-            <i class="occupancy"></i>Occupancy
-          </div>
-        </div>
-        <div class="panel">
-          <h2>Recent records</h2>
-          <div id="events" class="events"></div>
+      <section aria-labelledby="historyTitle">
+        <div class="section-title"><h2 id="historyTitle">Recent Measurements</h2><span>Automatically refreshed every 2 seconds</span></div>
+        <div class="card table-wrap">
+          <table>
+            <thead><tr><th>Timestamp</th><th>Mode</th><th>Occupancy</th><th>Temperature</th><th>Lux</th><th>Light</th><th>Fan</th><th>Cooling</th><th>Est. energy</th></tr></thead>
+            <tbody id="historyBody"><tr><td colspan="9">No measurements available.</td></tr></tbody>
+          </table>
         </div>
       </section>
     </main>
 
-    <script type="module" src="/static/js/app.js"></script>
+    <footer>Research prototype · SQLite history · MQTT communication · ESP32-local control</footer>
+    <script type="module" src="/static/app.js"></script>
   </body>
 </html>

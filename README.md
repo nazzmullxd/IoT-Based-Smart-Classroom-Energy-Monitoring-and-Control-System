@@ -1,139 +1,230 @@
 # IoT-Based Smart Classroom Energy Monitoring and Control System
 
-An academic, presentation-ready prototype that reduces unattended classroom energy use. A Wokwi ESP32 reads temperature, humidity, motion, and ambient light; controls four relay outputs locally; publishes telemetry over MQTT; and feeds a FastAPI/SQLite dashboard with history, overrides, runtime, estimated energy, and conventional-versus-automated comparison.
+A lightweight research prototype for the undergraduate thesis:
 
-## Architecture
+> **Design and Experimental Evaluation of an IoT-Based Smart Classroom Energy Management System Using Occupancy, Thermal, and Illumination-Aware Control**
 
-`DHT22 + PIR + LDR → ESP32 policy → relays/loads → Wi-Fi/MQTT → FastAPI/SQLite → REST/SSE dashboard`
+The prototype asks whether a locally autonomous, sensor-aware controller can reduce unnecessary classroom appliance runtime compared with scheduled conventional operation while maintaining appropriate environmental conditions. It is designed for explanation, demonstration, and reproducible comparison—not commercial deployment.
 
-The local service emulates a cloud platform so the complete project can be demonstrated without a paid account. See the [architecture](docs/architecture.md), [requirements](docs/requirements.md), [traceability](docs/traceability.md), [product design plan](docs/product-design-plan.md), concrete [implementation blueprint](docs/implementation-blueprint.md), and reusable [start-to-finish implementation prompt](docs/finish-project-prompt.md).
+## 1. Project Overview
 
-## Repository structure
+An ESP32 reads PIR occupancy, DHT22 temperature, and LDR illumination; applies the control policy locally; and controls lighting, fan, and a low-voltage cooling representation. MQTT transports telemetry and simple commands. FastAPI stores observations in SQLite and serves a one-page polling dashboard. Offline scripts replay identical classroom scenarios through CONVENTIONAL and SMART strategies.
+
+## 2. Research Motivation
+
+Scheduled classroom operation can leave lights and thermal loads active during vacancies or when daylight and temperature make them unnecessary. The proposed controller combines occupancy, illumination, and temperature while avoiding rapid relay switching through hysteresis and avoiding premature shutdown through an occupancy hold.
+
+## 3. Research Question
+
+> Can occupancy-, temperature-, and illumination-aware automated control reduce unnecessary classroom energy consumption compared with conventional classroom operation while maintaining appropriate classroom environmental conditions?
+
+## 4. Proposed Architecture
+
+```text
+PIR ─────────────┐
+DHT22 ──────────►│ ESP32 local control ──► LIGHT / FAN / COOLING
+LDR ─────────────┘          │
+                            │ MQTT
+                            ▼
+                       Mosquitto
+                            │
+                            ▼
+                    FastAPI ── SQLite
+                            │
+                            ▼
+                    polling dashboard
+```
+
+The ESP32 remains the automatic-control authority. Sensor sampling and appliance decisions continue if Wi-Fi, MQTT, FastAPI, or the dashboard is unavailable. See [architecture.md](docs/architecture/architecture.md).
+
+## 5. Hardware and Simulation Components
+
+| Component | Purpose | ESP32 pin |
+|---|---|---:|
+| PIR | Motion/occupancy input | GPIO 13 |
+| DHT22 | Temperature and supporting humidity telemetry | GPIO 15 |
+| LDR module | Approximate ambient lux | GPIO 34 |
+| Light indicator/relay | Lighting representation | GPIO 21 |
+| Fan indicator/relay | Fan representation | GPIO 22 |
+| Cooling indicator/relay | AC/cooling representation | GPIO 23 |
+
+The cooling output should remain a low-voltage LED or small DC fan for this thesis prototype. Actual mains switching is not required. The LDR conversion is isolated in `SensorManager`, making a later BH1750 substitution straightforward.
+
+## 6. Smart Control Algorithm
+
+SMART mode applies:
+
+- Occupancy hold: the room remains effectively occupied for a configurable period after the last PIR motion.
+- Lighting: occupied and lux ≤ 150 turns the light on; lux ≥ 250 turns it off.
+- Fan: occupied and temperature ≥ 28 °C turns the fan on; temperature ≤ 26 °C turns it off.
+- Cooling: occupied and temperature ≥ 29 °C turns cooling on; temperature ≤ 28 °C turns it off.
+- Vacancy: after the occupancy timeout, all three loads turn off.
+
+Separated on/off thresholds implement hysteresis. Firmware values are centralized in [config.h](apps/firmware/include/smart_classroom/config.h); experiment values are centralized in [config.py](experiments/config.py).
+
+## 7. Conventional Baseline
+
+CONVENTIONAL represents scheduled classroom usage: light, fan, and cooling remain on for the complete evaluated scenario, regardless of occupancy, temperature, or daylight. It is an explicit experimental baseline, not a claim about every real classroom.
+
+The three firmware modes are:
+
+- `SMART`: full proposed local control.
+- `CONVENTIONAL`: scheduled-operation baseline.
+- `MANUAL`: direct dashboard/MQTT on/off commands for demonstrations.
+
+## 8. MQTT Architecture
+
+| Topic | Direction | Purpose |
+|---|---|---|
+| `smartclassroom/telemetry` | ESP32 → backend | Sensors, mode, device states, runtime, estimated energy |
+| `smartclassroom/control` | backend → ESP32 | Manual device command |
+| `smartclassroom/mode` | backend → ESP32 | SMART/CONVENTIONAL/MANUAL selection |
+
+The backend tolerates malformed messages and broker downtime. Details and payload examples are in [mqtt.md](docs/architecture/mqtt.md).
+
+## 9. Energy Estimation
+
+For each device:
+
+$$E_i=P_i\times t_i$$
+
+with power in watts, runtime in hours, and estimated energy in watt-hours. Total energy is the sum of light, fan, and cooling estimates. The paired comparison is:
+
+$$Saving(\%)=\frac{E_{conventional}-E_{smart}}{E_{conventional}}\times100$$
+
+Default nominal ratings are 120 W lighting, 75 W fan, and 1500 W cooling. These are configurable assumptions.
+
+> **Energy consumption reported by the Wokwi simulation is estimated using nominal device power and recorded runtime and does not constitute direct mains-energy measurement.**
+
+## 10. Experimental Methodology
+
+[scenarios.csv](experiments/scenarios.csv) contains eight simulated classroom profiles: normal day, high occupancy, intermittent occupancy, long vacancy, high temperature, high daylight, cloudy/low daylight, and rapidly changing occupancy. Each timestamped occupancy/temperature/lux sequence is replayed unchanged through both controllers, providing paired inputs.
+
+Optional ablations are `OCCUPANCY_ONLY`, `OCCUPANCY_ILLUMINATION`, `OCCUPANCY_TEMPERATURE`, and `SMART_NO_HYSTERESIS`. The complete protocol is in [methodology.md](docs/thesis/methodology.md).
+
+## 11. Evaluation Metrics
+
+Generated summaries include estimated total/per-device energy, estimated saving percentage, device runtime, total switching events, activation/shutdown delays, occupied-time illumination sufficiency, and thermal-demand response. The thermal metric is an operating-condition proxy because the scenario does not model closed-loop room thermodynamics.
+
+## 12. Running the Simulation
+
+Requirements: Python 3.11–3.13, `uv`, PlatformIO, Mosquitto, VS Code Wokwi extension, and the Wokwi Private IoT Gateway when connecting the simulation to a host-local broker.
+
+1. Install Python dependencies:
+
+   ```powershell
+   uv sync --project apps/server --extra dev --extra research
+   ```
+
+2. Start Mosquitto:
+
+   ```powershell
+   mosquitto -c infra/mosquitto/mosquitto.conf -v
+   ```
+
+3. Start FastAPI from the repository root:
+
+   ```powershell
+   uv run --project apps/server uvicorn smart_classroom_api.main:app --reload --host 127.0.0.1 --port 8000
+   ```
+
+4. Build the firmware:
+
+   ```powershell
+   pio run -d apps/firmware
+   ```
+
+5. Open `apps/firmware` as the VS Code workspace and run **Wokwi: Start Simulator**. The configured broker is `host.wokwi.internal`; this requires Wokwi's Private IoT Gateway to reach host Mosquitto.
+
+6. Open <http://127.0.0.1:8000>. FastAPI also serves its small OpenAPI view at <http://127.0.0.1:8000/docs>.
+
+Docker is not required. The main workflow is Mosquitto → FastAPI → Wokwi → dashboard.
+
+## 13. Running Experiments
+
+Run the paired study and analysis:
+
+```powershell
+uv run --project apps/server --extra research python experiments/run_experiment.py
+uv run --project apps/server --extra research python experiments/analyze_results.py
+```
+
+Include all ablations with:
+
+```powershell
+uv run --project apps/server --extra research python experiments/run_experiment.py --include-ablation
+```
+
+Outputs are written to `experiments/results/` and `experiments/figures/`.
+
+## 14. Dashboard
+
+The single page shows sensor values, three appliance states/runtimes, operating mode, manual controls, estimated SMART-versus-CONVENTIONAL energy, a comparison chart, and recent observations. It polls the five-purpose API every two seconds; there is no SSE or frontend build step.
+
+The complete public API is intentionally small:
+
+- `GET /api/status`
+- `GET /api/history?limit=100`
+- `GET /api/energy`
+- `POST /api/mode` with `{"mode":"SMART|CONVENTIONAL|MANUAL"}`
+- `POST /api/control` with `{"device":"light|fan|cooling","state":true|false}`
+
+## 15. Example Experiment
+
+The included `normal_classroom_day` scenario runs from 08:00 to 16:00 with three occupied teaching blocks and intervening vacancies. With the default nominal ratings and thresholds:
+
+| Metric | CONVENTIONAL | SMART |
+|---|---:|---:|
+| Estimated energy | 13,560.0 Wh | 5,927.5 Wh |
+| Light runtime | 8.00 h | 1.17 h |
+| Fan runtime | 8.00 h | 3.83 h |
+| Cooling runtime | 8.00 h | 3.67 h |
+| Switching events | 3 | 10 |
+| Estimated reduction | — | 56.29% |
+
+This result is generated from a simulated input scenario and nominal power model. It is an **estimated energy reduction under the evaluated operating scenario**, not a measured classroom saving.
+
+## 16. Physical Prototype
+
+The same ESP32 control structure can use a physical PIR, DHT22, LDR or BH1750, LED, and small DC fan. A later metered study should add calibrated, isolated measurement hardware and qualified electrical installation; it should not infer mains consumption from the simulation.
+
+## 17. Current Limitations
+
+- Sensors and loads are simulated unless physical components are connected.
+- LDR lux is approximate and uncalibrated.
+- Energy is runtime-based estimation, not direct electrical measurement.
+- Cooling does not change the scenario temperature; thermal dynamics are simplified.
+- PIR detects motion rather than counting occupants and can miss stationary people.
+- Results depend on nominal power and scenario assumptions.
+- No full classroom deployment or long-term reliability trial has been performed.
+
+## 18. Future Work
+
+Calibrate or replace the light sensor, measure each load with safe certified hardware, model or measure room thermal response, repeat paired trials across real classrooms, quantify sensor/control uncertainty, and apply suitable inferential statistics after collecting independent repeated trials.
+
+## Repository Structure
 
 ```text
 apps/
-├── firmware/     PlatformIO ESP32 firmware, Wokwi circuit, and simulator config
-├── server/       FastAPI package and its unit/integration tests
-└── dashboard/    dependency-light HTML/CSS/JavaScript dashboard
-data/             local runtime database (ignored by Git)
-docs/             requirements, architecture, validation, plans, and source material
-infra/            Docker Compose and Mosquitto configuration
-scenarios/        demonstration scenarios
+├── firmware/       ESP32 local controller and Wokwi circuit
+├── server/         compact FastAPI/SQLite/MQTT service and tests
+└── dashboard/      one-page HTML/CSS/JavaScript dashboard
+experiments/        scenarios, replay controller, analysis, results, figures
+docs/
+├── architecture/   system and MQTT contracts
+└── thesis/         research methodology and thesis mapping
+infra/mosquitto/    local broker configuration
+data/               ignored local SQLite runtime files
 ```
-
-Generated caches, compiled firmware, local databases, virtual environments, and secrets are not source code and are ignored.
-
-## Features
-
-- Local automation continues when Wi-Fi, MQTT, or the backend is unavailable.
-- PIR occupancy hold, temperature/lux hysteresis, and non-blocking delayed shutdowns.
-- Projector OFF/ON/COOLING_DOWN state machine and physical button.
-- AUTO/FORCE_ON/FORCE_OFF per device through serial, MQTT, REST, and dashboard.
-- Per-device runtime/transitions and clearly labeled estimated energy.
-- AUTO and assumed CONVENTIONAL experimental modes with a division-safe saving ratio.
-- Validated telemetry, SQLite history/action logs, REST API, SSE, and responsive dashboard.
-
-## Install and run the server
-
-The recommended Python workflow uses [uv](https://docs.astral.sh/uv/):
-
-```powershell
-uv sync --project apps/server --extra dev
-uv run --project apps/server uvicorn smart_classroom_api.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Open <http://localhost:8000>. OpenAPI is available at <http://localhost:8000/docs>.
-
-Environment variables are documented in `.env.example`. The default database is `data/smart_classroom.db`, and the default dashboard path is `apps/dashboard`.
-
-## Start MQTT
-
-With a local Mosquitto installation:
-
-```powershell
-mosquitto -c infra/mosquitto/mosquitto.conf -v
-```
-
-Or start MQTT and the server together:
-
-```powershell
-docker compose -f infra/compose.yaml up
-```
-
-## Build and simulate firmware
-
-Build from the repository root:
-
-```powershell
-pio run -d apps/firmware
-```
-
-If `pio` is unavailable, open `apps/firmware` as the workspace folder in VS Code with the PlatformIO IDE extension and build there. Then run **Wokwi: Start Simulator** from that firmware workspace. `apps/firmware/wokwi.toml` points to the generated BIN/ELF.
-
-Wokwi uses `Wokwi-GUEST`. The ESP32 broker hostname is `host.wokwi.internal`, not `localhost`. Reaching a broker on the host computer requires Wokwi's Private IoT Gateway.
-
-The circuit sources are [diagram.json](apps/firmware/diagram.json) and [wokwi.toml](apps/firmware/wokwi.toml). A license-independent [SVG circuit diagram](docs/circuit-diagram.svg) is also available.
-
-## Pin map
-
-| Component | ESP32 pin |
-|---|---:|
-| DHT22 DATA | GPIO 15 |
-| PIR OUT | GPIO 13 |
-| LDR AO | GPIO 34 (input-only) |
-| AC / Fan / Light / Projector relay | GPIO 23 / 22 / 21 / 19 |
-| Projector button | GPIO 27, internal pull-up |
-
-## Demonstration
-
-1. Start the broker, server, and simulation; wait for telemetry.
-2. Trigger PIR motion. Occupancy remains active for 15 seconds after motion ends.
-3. Set DHT22 temperature above 28 °C. AC and fan activate; lower it to observe hysteresis and delayed shutdown.
-4. Lower illuminance below 150 lux while occupied. Lights activate; raise it above 220 lux to observe delayed shutdown.
-5. Press the projector button while occupied. Press again to observe its 8-second COOLING_DOWN state.
-6. Let occupancy expire and watch the automatic shutdown sequence.
-7. Use AUTO, ON, and OFF on each dashboard equipment card.
-8. Compare AUTO and CONVENTIONAL estimated energy using the [experiment procedure](docs/energy-experiment.md).
-
-## REST API
-
-- `GET /api/status`, `/api/telemetry/latest`, `/api/telemetry/history?limit=100`
-- `GET /api/devices`, `/api/energy`, `/api/events`
-- `POST /api/control/{ac|fan|lights|projector}` with `{"value":"AUTO|FORCE_ON|FORCE_OFF"}`
-- `POST /api/mode` with `{"mode":"AUTO|CONVENTIONAL"}`
-- `POST /api/reset` with `{"target":"ENERGY|RUNTIME|ALL"}`
-
-## Serial commands
-
-At 115200 baud: `STATUS`, `MODE AUTO`, `MODE CONVENTIONAL`, `AC|FAN|LIGHT|PROJECTOR AUTO|ON|OFF`, `RESET ENERGY`, and `RESET RUNTIME`.
-
-## Energy model
-
-Wokwi values are **estimated energy**, calculated as `nominal watts × runtime hours`, not measured consumption. Defaults are 1500 W AC, 75 W fan, 120 W lights, and 300 W projector. The saving ratio is `(conventional − automated) / conventional × 100`; a zero conventional value returns zero.
-
-The CONVENTIONAL policy is an explicit experiment assumption: AC, fan, and lights stay on while the projector remains manual.
 
 ## Tests
 
 ```powershell
-uv run --project apps/server --extra dev pytest
-uv run --project apps/server python -m compileall apps/server/src
+uv run --project apps/server --extra dev pytest -q
+uv run --project apps/server python -m compileall apps/server/src experiments
+node --check apps/dashboard/app.js
 uv run --project apps/server python -m json.tool apps/firmware/diagram.json > $null
+pio run -d apps/firmware
 ```
 
-If installed, run `wokwi-cli lint apps/firmware/diagram.json`. The manual hardware matrix is in [test-plan.md](docs/test-plan.md).
-
-## Troubleshooting
-
-- **`pio` missing:** install/enable PlatformIO IDE, then build the `apps/firmware` project.
-- **Wrong Wokwi firmware path:** confirm `apps/firmware/.pio/build/esp32dev/firmware.bin` and `.elf` match `apps/firmware/wokwi.toml`.
-- **No dashboard data:** inspect ESP32 serial output, Mosquitto logs, and `GET /api/status`.
-- **Backend port conflict:** choose another Uvicorn port and open that URL.
-- **MQTT unavailable:** run with `$env:MQTT_ENABLED="false"` when only the API/dashboard is being tested.
-- **Database issue:** confirm the process can write to `data/` or the configured `DATABASE_PATH`.
-
-## Limitations
-
-Lux is approximate and uncalibrated. Relays/LEDs do not simulate mains power, current, inrush, power factor, thermal dynamics, or true projector control. A physical deployment requires calibrated sensors, certified metering, electrical isolation and correctly rated contactors, device-specific projector/AC commands, authenticated TLS MQTT, realistic timers, and qualified electrical installation.
-
-The preserved source methodology is [docs/source/proposed-methodology.md](docs/source/proposed-methodology.md).
+The focused suite covers threshold behavior, hysteresis, occupancy timeout, SMART and CONVENTIONAL modes, energy equations, malformed MQTT input, API commands, SQLite interval energy, and missing latest telemetry.

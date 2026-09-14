@@ -15,6 +15,5 @@ class SensorManager {
   DHT dht_;
   SensorReading reading_;
   unsigned long lastReadMs_ = 0;
-  bool darkLatched_ = false;
   float rawToLux(int raw, bool &error);
 };

@@ -46,19 +46,15 @@ bool SensorManager::update(unsigned long now, bool occupied) {
 
   float h = dht_.readHumidity();
   float t = dht_.readTemperature();
-  reading_.dhtError = isnan(h) || isnan(t);
-  if (!reading_.dhtError) {
+  const bool dhtError = isnan(h) || isnan(t);
+  if (!dhtError) {
     reading_.humidityPct = h;
     reading_.temperatureC = t;
   }
 
   reading_.ldrRaw = analogRead(Config::LDR_PIN);
-  reading_.illuminanceLux = rawToLux(reading_.ldrRaw, reading_.ldrError);
-  if (!darkLatched_ && reading_.illuminanceLux < Config::LIGHT_ON_LUX) {
-    darkLatched_ = true;
-  } else if (darkLatched_ && reading_.illuminanceLux > Config::LIGHT_OFF_LUX) {
-    darkLatched_ = false;
-  }
-  reading_.dark = darkLatched_;
+  bool ldrError = false;
+  reading_.illuminanceLux = rawToLux(reading_.ldrRaw, ldrError);
+  reading_.sensorError = dhtError || ldrError;
   return true;
 }
