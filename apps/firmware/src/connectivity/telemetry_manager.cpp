@@ -14,7 +14,7 @@ const String &TelemetryManager::bootId() {
 }
 
 void TelemetryManager::publish(
-    NetworkManager &network,
+    ClassroomNetwork &network,
     const SensorReading &reading,
     const DeviceManager &devices,
     OperatingMode mode,

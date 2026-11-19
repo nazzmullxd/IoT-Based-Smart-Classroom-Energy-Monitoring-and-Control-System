@@ -11,3 +11,12 @@
 .wokwi-token
 coverage/
 htmlcov/
+
+# LaTeX intermediates; retain the source and distributable PDF.
+docs/latex/*.aux
+docs/latex/*.log
+docs/latex/*.out
+docs/latex/*.toc
+docs/latex/*.fls
+docs/latex/*.fdb_latexmk
+docs/latex/*.synctex.gz

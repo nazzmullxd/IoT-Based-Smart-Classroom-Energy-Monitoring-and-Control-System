@@ -2,11 +2,11 @@
 
 #include "smart_classroom/config.h"
 
-CommandHandler NetworkManager::handler_ = nullptr;
+CommandHandler ClassroomNetwork::handler_ = nullptr;
 
-NetworkManager::NetworkManager() : mqtt_(wifiClient_) {}
+ClassroomNetwork::ClassroomNetwork() : mqtt_(wifiClient_) {}
 
-void NetworkManager::begin(CommandHandler handler) {
+void ClassroomNetwork::begin(CommandHandler handler) {
   handler_ = handler;
   WiFi.mode(WIFI_STA);
   WiFi.begin(Config::WIFI_SSID, Config::WIFI_PASSWORD);
@@ -15,7 +15,7 @@ void NetworkManager::begin(CommandHandler handler) {
   mqtt_.setBufferSize(1024);
 }
 
-void NetworkManager::callback(char *topic, byte *payload, unsigned int length) {
+void ClassroomNetwork::callback(char *topic, byte *payload, unsigned int length) {
   if (!handler_ || length >= 512) return;
   char message[512];
   memcpy(message, payload, length);
@@ -23,7 +23,7 @@ void NetworkManager::callback(char *topic, byte *payload, unsigned int length) {
   handler_(topic, message);
 }
 
-void NetworkManager::loop(unsigned long now) {
+void ClassroomNetwork::loop(unsigned long now) {
   if (WiFi.status() != WL_CONNECTED) {
     if ((unsigned long)(now - lastWifiAttempt_) >= Config::WIFI_RETRY_MS) {
       lastWifiAttempt_ = now;
@@ -49,6 +49,6 @@ void NetworkManager::loop(unsigned long now) {
   mqtt_.loop();
 }
 
-bool NetworkManager::publish(const char *topic, const char *payload, bool retained) {
+bool ClassroomNetwork::publish(const char *topic, const char *payload, bool retained) {
   return mqtt_.connected() && mqtt_.publish(topic, payload, retained);
 }

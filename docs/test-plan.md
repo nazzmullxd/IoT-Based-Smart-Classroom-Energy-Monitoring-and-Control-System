@@ -8,6 +8,16 @@ The suite verifies lighting and temperature thresholds, hysteresis, occupancy ti
 
 ## Manual Wokwi matrix
 
+First build the firmware and run `uv run --with wasmtime==44.0.0 python tools/check_diagram.py`
+from the repository root. This checks both diagram copies, configured build paths, and
+the compiled appliance visuals with simulated pin transitions. It does not test the
+relay electrical model or replace the interactive matrix below.
+
+In Wokwi, confirm OFF at boot, then check that each serial ON/OFF state matches its
+relay's NO contact and appliance graphic. Verify that the fan/airflow animation stops
+after vacancy, and that both root and `apps/firmware` workspace entry points load the
+custom visuals. See [diagram-guide.md](diagram-guide.md) for click-by-click inputs.
+
 | Case | Occupancy | Temperature | Lux | Expected SMART output |
 |---|---|---:|---:|---|
 | Empty, hot, dark | Unoccupied after hold | 32 °C | 50 | All off |

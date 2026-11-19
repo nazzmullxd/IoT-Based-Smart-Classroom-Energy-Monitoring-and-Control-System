@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <Arduino.h>
 
@@ -9,7 +9,7 @@
 class TelemetryManager {
  public:
   void publish(
-      NetworkManager &network,
+      ClassroomNetwork &network,
       const SensorReading &reading,
       const DeviceManager &devices,
       OperatingMode mode,

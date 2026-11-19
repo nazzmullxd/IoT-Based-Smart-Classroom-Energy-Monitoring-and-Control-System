@@ -8,6 +8,11 @@ The prototype asks whether a locally autonomous, sensor-aware controller can red
 
 ## 1. Project Overview
 
+For a step-by-step explanation of the circuit, read the
+[A4 diagram documentation (PDF)](docs/latex/diagram-explained.pdf).
+Its [LaTeX source](docs/latex/diagram-explained.tex) uses a plain black-and-white
+article layout with the default serif font.
+
 An ESP32 reads PIR occupancy, DHT22 temperature, and LDR illumination; applies the control policy locally; and controls lighting, fan, and a low-voltage cooling representation. MQTT transports telemetry and simple commands. FastAPI stores observations in SQLite and serves a one-page polling dashboard. Offline scripts replay identical classroom scenarios through CONVENTIONAL and SMART strategies.
 
 ## 2. Research Motivation
@@ -48,7 +53,7 @@ The ESP32 remains the automatic-control authority. Sensor sampling and appliance
 | Fan indicator/relay | Fan representation | GPIO 22 |
 | Cooling indicator/relay | AC/cooling representation | GPIO 23 |
 
-The cooling output should remain a low-voltage LED or small DC fan for this thesis prototype. Actual mains switching is not required. The LDR conversion is isolated in `SensorManager`, making a later BH1750 substitution straightforward.
+The simulator uses relay-driven appliance graphics: an illuminated light fixture, an animated fan, and a cooling-unit display. These indicate relay contact state without simulating appliance current or room thermodynamics. For a physical prototype, the cooling output remains a low-voltage LED or small DC fan. The LDR conversion is isolated in `SensorManager`, making a later BH1750 substitution straightforward. See the [annotated diagram guide](docs/diagram-guide.md) for pin mappings, demonstration steps, and visual-component checks.
 
 ## 6. Smart Control Algorithm
 
@@ -134,7 +139,7 @@ Requirements: Python 3.11–3.13, `uv`, PlatformIO, Mosquitto, VS Code Wokwi ext
    pio run -d apps/firmware
    ```
 
-5. Open `apps/firmware` as the VS Code workspace and run **Wokwi: Start Simulator**. The configured broker is `host.wokwi.internal`; this requires Wokwi's Private IoT Gateway to reach host Mosquitto.
+5. Open the repository root (or `apps/firmware`) as the VS Code workspace and run **Wokwi: Start Simulator**. Both entry points include matching diagrams and use the same firmware and bundled appliance-visual binary. The configured broker is `host.wokwi.internal`; this requires Wokwi's Private IoT Gateway to reach host Mosquitto.
 
 6. Open <http://127.0.0.1:8000>. FastAPI also serves its small OpenAPI view at <http://127.0.0.1:8000/docs>.
 

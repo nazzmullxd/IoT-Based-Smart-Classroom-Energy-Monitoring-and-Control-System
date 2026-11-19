@@ -5,9 +5,10 @@
 
 typedef void (*CommandHandler)(const char *topic, const char *payload);
 
-class NetworkManager {
+// Keep distinct from Arduino-ESP32 3.x's global NetworkManager class.
+class ClassroomNetwork {
  public:
-  NetworkManager();
+  ClassroomNetwork();
   void begin(CommandHandler handler);
   void loop(unsigned long now);
   bool publish(const char *topic, const char *payload, bool retained = false);

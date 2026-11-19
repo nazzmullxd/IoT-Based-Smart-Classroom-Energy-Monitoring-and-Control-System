@@ -1,0 +1,6 @@
+{
+  "name": "Classroom appliance (state visualization)",
+  "author": "Smart Classroom Research Prototype",
+  "pins": ["SW", "GND", "", ""],
+  "display": {"width": 240, "height": 160}
+}

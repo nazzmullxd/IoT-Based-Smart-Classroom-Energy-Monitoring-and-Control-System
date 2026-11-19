@@ -12,7 +12,7 @@
 SensorManager sensors;
 OccupancyManager occupancy;
 DeviceManager devices;
-NetworkManager network;
+ClassroomNetwork network;
 TelemetryManager telemetry;
 OperatingMode operatingMode = OperatingMode::SMART;
 

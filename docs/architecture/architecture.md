@@ -53,4 +53,4 @@ The experiment runner is deliberately separate from live control. It reads deter
 
 ## Local autonomy failure case
 
-If MQTT or FastAPI stops, `NetworkManager::loop` returns quickly and the firmware main loop continues to call sensor acquisition and `DeviceManager::update`. Telemetry and remote commands become unavailable, but SMART control continues. This behavior can be demonstrated by stopping Mosquitto while changing Wokwi sensor inputs.
+If MQTT or FastAPI stops, `ClassroomNetwork::loop` returns quickly and the firmware main loop continues to call sensor acquisition and `DeviceManager::update`. Telemetry and remote commands become unavailable, but SMART control continues. This behavior can be demonstrated by stopping Mosquitto while changing Wokwi sensor inputs.
